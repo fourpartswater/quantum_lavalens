@@ -1,5 +1,7 @@
 # Quantum Llama Lens (QLL)
 
+### This is very much a work in progress. Nothing works and most of the implementation checklist is rubbish :)
+
 Quantum Llama Lens (QLL) is an advanced framework aimed at converting the Llama 3 8B model to a tensor network formulation, integrating quantum-inspired techniques and Sparse Autoencoders (SAE). This README provides an overview of the project status and future directions.
 
 ## Installation
