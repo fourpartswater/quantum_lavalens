@@ -4,8 +4,8 @@ from llama_sae_generation import load_model, LlamaSaeGenerator
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ckpt_dir", type=str, required=True)
-    parser.add_argument("--tokenizer_path", type=str, required=True)
+    parser.add_argument("--llama_dir", type=str, required=True)
+    parser.add_argument("--sae_dir", type=str, required=True)
     parser.add_argument("--max_seq_len", type=int, default=512)
     parser.add_argument("--max_batch_size", type=int, default=8)
     parser.add_argument("--sae_layers", type=str, default="")
@@ -14,8 +14,8 @@ def main():
     sae_layers = [int(layer) for layer in args.sae_layers.split(",")] if args.sae_layers else None
 
     model, tokenizer = load_model(
-        args.ckpt_dir,
-        args.tokenizer_path,
+        args.llama_dir,
+        args.sae_dir,
         args.max_seq_len,
         args.max_batch_size,
         sae_layers

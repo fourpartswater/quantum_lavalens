@@ -1,28 +1,28 @@
 # llama_sae_generation.py
+
 import json
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple
-
 import torch
 from fairscale.nn.model_parallel.initialize import initialize_model_parallel
+from safetensors.torch import load_file
 
 from llama_sae_model import LlamaSaeModel, ModelArgs
 from tokenizer import Tokenizer, Dialog
 
-def load_model(ckpt_dir: str, tokenizer_path: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None):
+def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None):
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     torch.distributed.init_process_group("nccl")
     initialize_model_parallel(world_size)
     torch.cuda.set_device(local_rank)
 
-    checkpoints = sorted(Path(ckpt_dir).glob("*.pth"))
-    with open(Path(ckpt_dir) / "params.json", "r") as f:
-        params = json.loads(f.read())
+    with open(Path(llama_dir) / "original" / "params.json", "r") as f:
+        params = json.load(f)
 
     model_args: ModelArgs = ModelArgs(max_seq_len=max_seq_len, max_batch_size=max_batch_size, **params)
-    tokenizer = Tokenizer(model_path=tokenizer_path)
+    tokenizer = Tokenizer(model_path=str(Path(llama_dir) / "original" / "tokenizer.model"))
     model_args.vocab_size = tokenizer.n_words
 
     if torch.cuda.is_bf16_supported():
@@ -33,13 +33,13 @@ def load_model(ckpt_dir: str, tokenizer_path: str, max_seq_len: int, max_batch_s
     model = LlamaSaeModel(model_args, sae_layers)
     
     # Load Llama checkpoint
-    checkpoint = torch.load(checkpoints[0], map_location="cpu")
+    checkpoint = torch.load(Path(llama_dir) / "original" / "consolidated.00.pth", map_location="cpu")
     model.load_state_dict(checkpoint, strict=False)
 
     # Load SAE checkpoints if specified
     if sae_layers:
         for layer in sae_layers:
-            sae_ckpt = torch.load(f"path/to/sae/checkpoints/layer_{layer}.pth", map_location="cpu")
+            sae_ckpt = load_file(Path(sae_dir) / f"layers.{layer}" / "sae.safetensors")
             model.saes[f"layer_{layer}"].load_state_dict(sae_ckpt)
 
     model.to(local_rank)
