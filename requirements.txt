@@ -1,0 +1,16 @@
+tiktoken
+blobfile
+torch
+opt_einsum
+natsort
+safetensors
+einops
+
+# Optional dependencies (uncomment if needed)
+# fairscale
+# huggingface-hub
+# pyyaml
+# matplotlib
+# datasets
+# simple-parsing
+# transformers
