@@ -10,23 +10,27 @@ from safetensors.torch import load_file
 from llama_sae_model import LlamaSaeModel, ModelArgs
 from tokenizer import Tokenizer, Dialog
 
-def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None):
+def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None, device: Optional[str] = None):
     with open(Path(llama_dir) / "original" / "params.json", "r") as f:
         params = json.load(f)
 
     model_args: ModelArgs = ModelArgs(max_seq_len=max_seq_len, max_batch_size=max_batch_size, **params)
     tokenizer = Tokenizer(model_path=str(Path(llama_dir) / "original" / "tokenizer.model"))
     model_args.vocab_size = tokenizer.n_words
-
-    if torch.backends.mps.is_available():
-        device = torch.device("mps")
-        dtype = torch.float32  # MPS doesn't support BFloat16, so we'll use Float32
-    elif torch.cuda.is_available():
-        device = torch.device("cuda")
-        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    #specify device as command line parameter or will fallback to mps, cuda, cpu in that order
+    if device is None:
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+            dtype = torch.float16  # MPS doesn't support BFloat16, so we'll use Float16
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        else:
+            device = torch.device("cpu")
+            dtype = torch.float16
     else:
-        device = torch.device("cpu")
-        dtype = torch.float32
+        device = torch.device(device)
+        dtype = torch.float16 if device.type == 'mps' else (torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
 
     model = LlamaSaeModel(model_args, sae_layers)
     
