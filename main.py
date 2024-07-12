@@ -19,7 +19,7 @@ def main():
         args.sae_dir,
         args.max_seq_len,
         args.max_batch_size,
-        sae_layers
+        sae_layers,
 	args.device
     )
 
