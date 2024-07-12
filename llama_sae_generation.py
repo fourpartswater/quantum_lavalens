@@ -10,14 +10,29 @@ from safetensors.torch import load_file
 from llama_sae_model import LlamaSaeModel, ModelArgs
 from tokenizer import Tokenizer, Dialog
 
-def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None, device: Optional[str] = None):
-    with open(Path(llama_dir) / "original" / "params.json", "r") as f:
+def load_model(model_name_or_path: str, sae_name_or_path: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None, device: Optional[str] = None):
+    if model_name_or_path.startswith("meta-llama/"):
+        # Download from Hugging Face
+        llama_dir = snapshot_download(repo_id=model_name_or_path, allow_patterns=["original/*"])
+        llama_dir = Path(llama_dir) / "original"
+    else:
+        llama_dir = Path(model_name_or_path)
+
+    if sae_name_or_path.startswith("EleutherAI/"):
+        # Download SAE from Hugging Face
+        sae_dir = snapshot_download(repo_id=sae_name_or_path)
+    else:
+        sae_dir = Path(sae_name_or_path)
+
+    # Rest of the function remains the same
+    with open(llama_dir / "params.json", "r") as f:
         params = json.load(f)
 
     model_args: ModelArgs = ModelArgs(max_seq_len=max_seq_len, max_batch_size=max_batch_size, **params)
-    tokenizer = Tokenizer(model_path=str(Path(llama_dir) / "original" / "tokenizer.model"))
+    tokenizer = Tokenizer(model_path=str(llama_dir / "tokenizer.model"))
     model_args.vocab_size = tokenizer.n_words
-    #specify device as command line parameter or will fallback to mps, cuda, cpu in that order
+
+    # Device selection logic (unchanged)
     if device is None:
         if torch.backends.mps.is_available():
             device = torch.device("mps")
@@ -35,13 +50,13 @@ def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: i
     model = LlamaSaeModel(model_args, sae_layers)
     
     # Load Llama checkpoint
-    checkpoint = torch.load(Path(llama_dir) / "original" / "consolidated.00.pth", map_location="cpu")
+    checkpoint = torch.load(llama_dir / "consolidated.00.pth", map_location="cpu")
     model.load_state_dict(checkpoint, strict=False)
 
     # Load SAE checkpoints if specified
     if sae_layers:
         for layer in sae_layers:
-            sae_ckpt = load_file(Path(sae_dir) / f"layers.{layer}" / "sae.safetensors")
+            sae_ckpt = load_file(sae_dir / f"layers.{layer}" / "sae.safetensors")
             model.saes[f"layer_{layer}"].load_state_dict(sae_ckpt)
 
     model.to(device).to(dtype)

@@ -4,8 +4,10 @@ from llama_sae_generation import load_model, LlamaSaeGenerator
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--llama_dir", type=str, required=True)
-    parser.add_argument("--sae_dir", type=str, required=True)
+    parser.add_argument("--llama_model", type=str, required=True, 
+                        help="Local path or Hugging Face model name (e.g., meta-llama/Meta-Llama-3-8B)")
+    parser.add_argument("--sae_model", type=str, required=True,
+                        help="Local path or Hugging Face model name (e.g., EleutherAI/sae-llama-3-8b-32x)")
     parser.add_argument("--max_seq_len", type=int, default=512)
     parser.add_argument("--max_batch_size", type=int, default=1)  # Reduced batch size for MPS
     parser.add_argument("--sae_layers", type=str, default="")
@@ -15,8 +17,8 @@ def main():
     sae_layers = [int(layer) for layer in args.sae_layers.split(",")] if args.sae_layers else None
 
     model, tokenizer = load_model(
-        args.llama_dir,
-        args.sae_dir,
+        args.llama_model,
+        args.sae_model,
         args.max_seq_len,
         args.max_batch_size,
         sae_layers,

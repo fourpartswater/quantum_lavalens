@@ -5,10 +5,10 @@ opt_einsum
 natsort
 safetensors
 einops
+huggingface-hub
 
 # Optional dependencies (uncomment if needed)
 # fairscale
-# huggingface-hub
 # pyyaml
 # matplotlib
 # datasets
