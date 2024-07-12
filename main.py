@@ -9,6 +9,7 @@ def main():
     parser.add_argument("--max_seq_len", type=int, default=512)
     parser.add_argument("--max_batch_size", type=int, default=1)  # Reduced batch size for MPS
     parser.add_argument("--sae_layers", type=str, default="")
+    parser.add_argument("--device", type=str, default=None, choices=['cpu', 'cuda', 'mps'])
     args = parser.parse_args()
 
     sae_layers = [int(layer) for layer in args.sae_layers.split(",")] if args.sae_layers else None
@@ -19,6 +20,7 @@ def main():
         args.max_seq_len,
         args.max_batch_size,
         sae_layers
+	args.device
     )
 
     generator = LlamaSaeGenerator(model, tokenizer)
