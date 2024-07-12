@@ -5,19 +5,12 @@ import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 import torch
-from fairscale.nn.model_parallel.initialize import initialize_model_parallel
 from safetensors.torch import load_file
 
 from llama_sae_model import LlamaSaeModel, ModelArgs
 from tokenizer import Tokenizer, Dialog
 
 def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: int, sae_layers: Optional[List[int]] = None):
-    local_rank = int(os.environ.get("LOCAL_RANK", 0))
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
-    torch.distributed.init_process_group("nccl")
-    initialize_model_parallel(world_size)
-    torch.cuda.set_device(local_rank)
-
     with open(Path(llama_dir) / "original" / "params.json", "r") as f:
         params = json.load(f)
 
@@ -25,10 +18,15 @@ def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: i
     tokenizer = Tokenizer(model_path=str(Path(llama_dir) / "original" / "tokenizer.model"))
     model_args.vocab_size = tokenizer.n_words
 
-    if torch.cuda.is_bf16_supported():
-        torch.set_default_tensor_type(torch.cuda.BFloat16Tensor)
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+        dtype = torch.float32  # MPS doesn't support BFloat16, so we'll use Float32
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
     else:
-        torch.set_default_tensor_type(torch.cuda.HalfTensor)
+        device = torch.device("cpu")
+        dtype = torch.float32
 
     model = LlamaSaeModel(model_args, sae_layers)
     
@@ -42,7 +40,7 @@ def load_model(llama_dir: str, sae_dir: str, max_seq_len: int, max_batch_size: i
             sae_ckpt = load_file(Path(sae_dir) / f"layers.{layer}" / "sae.safetensors")
             model.saes[f"layer_{layer}"].load_state_dict(sae_ckpt)
 
-    model.to(local_rank)
+    model.to(device).to(dtype)
 
     return model, tokenizer
 

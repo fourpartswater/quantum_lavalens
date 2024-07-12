@@ -7,7 +7,7 @@ def main():
     parser.add_argument("--llama_dir", type=str, required=True)
     parser.add_argument("--sae_dir", type=str, required=True)
     parser.add_argument("--max_seq_len", type=int, default=512)
-    parser.add_argument("--max_batch_size", type=int, default=8)
+    parser.add_argument("--max_batch_size", type=int, default=1)  # Reduced batch size for MPS
     parser.add_argument("--sae_layers", type=str, default="")
     args = parser.parse_args()
 
@@ -29,8 +29,8 @@ def main():
         "The meaning of life is",
     ]
 
-    completions = generator.text_completion(prompts)
-    for prompt, completion in zip(prompts, completions):
+    for prompt in prompts:
+        completion = generator.text_completion([prompt])[0]
         print(f"Prompt: {prompt}")
         print(f"Completion: {completion}")
         print()
@@ -47,8 +47,8 @@ def main():
         ],
     ]
 
-    chat_completions = generator.chat_completion(dialogs)
-    for dialog, completion in zip(dialogs, chat_completions):
+    for dialog in dialogs:
+        completion = generator.chat_completion([dialog])[0]
         print(f"Dialog: {dialog}")
         print(f"Assistant: {completion}")
         print()
