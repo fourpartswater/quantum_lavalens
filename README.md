@@ -1,7 +1,6 @@
 # quantum_lavalens
 
-pip install fairscale
-pip install tiktoken
+pip install fairscale tiktoken blobfile
 
 Usage example:
 
